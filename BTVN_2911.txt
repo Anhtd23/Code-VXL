@@ -1,0 +1,98 @@
+#include "stm32f10x.h"
+#include "stm32f10x_gpio.h"
+#include "stdlib.h"
+void GPIO_Configure(){
+	RCC -> APB2ENR |= 0x10;
+	GPIOC -> CRL   |= 0x00000000;
+	GPIOC -> CRL   |= 0x33333333;
+	GPIOC -> CRH 	 |= 0x00000000;
+	GPIOC -> CRH 	 |= 0x33333333;
+}
+void GPIO_ButtonConfigure(){
+	RCC -> APB2ENR |= 0x08;
+	GPIOB -> CRL |= 0xFFFFF000;
+	GPIOB -> CRL |= 0x00000888;
+}
+int32_t lastbut = 0x00, nowbut = 0x00, but =0x00;
+int checkbut(){
+	nowbut = GPIOB -> IDR & 0x07;
+		if(nowbut!=lastbut && nowbut!= 0x00){
+			but = nowbut;
+			return 1;
+		}
+		lastbut = nowbut;
+		return 0;
+}
+void TIM3_Configure(){
+	//cap clock Cho TIM3
+	RCC -> APB1ENR |= 0x02;
+	/*LOAD gia tri thanh ghi ban dau*/
+	TIM3 -> ARR     = 0xFFFF;//cau hinh cho no o gia tri nay truoc
+	/*bo chia tan so*/
+	TIM3 -> PSC     = 72 - 1;
+	/*cau hinh cho bien dem len */
+	TIM3 -> CR1    |= 0x01;
+	//Cau hinh cho su kien reload UG
+	TIM3 -> EGR    |= 0x01;
+}
+
+void delay(int time){
+	while(time){
+		TIM3 -> CNT = 0;
+		while(TIM3 -> CNT < 1000){
+		}
+		time--;
+	}
+}
+void canhbuom(){
+	GPIOC -> ODR |= 0xFFFF;
+	delay(10);
+	for(int i = 0; i <= 8; i++){
+		GPIOC -> ODR &= ~((1<<8)>>i);
+		GPIOC -> ODR &= ~((1<<7)<<i);
+		delay(10);
+	}
+}
+void giotnuoc(){
+	GPIOC -> ODR |= 0xFFFF;
+	delay(10);
+	for(int i = 15; i>= 0; i--){
+		for(int j = 0; j <= i; j++){
+			GPIOC -> ODR |= (1 << (j - 1));
+			GPIOC -> ODR &= ~(1 << j);
+			delay(10);
+		}
+	}
+}
+void sangdan(){
+	GPIOC -> ODR |= 0xFFFF;
+	delay(10);
+	for(int i = 0; i <= 15; i++){
+		GPIOC -> ODR &= ~(1<<i);
+		delay(10);
+	}
+}
+void snake(){
+	GPIOC -> ODR |= 0xFFFF;
+	delay(10);
+	int len = 3;
+	while (len < 16){
+		GPIOC -> ODR |= 0xFFFF;
+		int victim = 0 + (int)( rand() * (15 - 0 + 1.0) / (1.0 + RAND_MAX) );
+		GPIOC -> ODR &= ~(1 << victim);
+		for(int i = 0; i < 16; i++){
+			GPIOC -> ODR &= ~(1 << i);
+			if(i == victim){ len ++;}
+			GPIOC -> ODR |= ((1 << i) >> len);
+			delay(10);
+		}
+	}
+}
+int main(){
+	TIM3_Configure();
+	GPIO_Configure();
+	GPIO_ButtonConfigure();
+	while(1){
+		sangdan();
+	}
+}
